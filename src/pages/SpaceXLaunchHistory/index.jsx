@@ -32,7 +32,13 @@ const SpaceXLaunchHistory = () => {
 
   const launchesPerPage = 10;
 
+  useEffect(() => {
+    loadLaunches();
+  }, []);
 
+  useEffect(() => {
+    filterLaunches();
+  }, [launches, selectedPeriod, selectedLaunchType]);
 
   const loadLaunches = async () => {
     try {
@@ -135,7 +141,19 @@ const SpaceXLaunchHistory = () => {
     }
   };
 
- 
+  const handleLaunchClick = (launch) => {
+    setSelectedLaunch(launch);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedLaunch(null);
+  };
+
+  const handlePeriodChange = (period) => {
+    setSelectedPeriod(period);
+  };
 
   const handleLaunchTypeChange = (type) => {
     setSelectedLaunchType(type);
@@ -297,7 +315,13 @@ const SpaceXLaunchHistory = () => {
       </div>
 
       {/* Launch Details Modal */}
-     
+      {selectedLaunch && (
+        <LaunchModal
+          launch={selectedLaunch}
+          isOpen={isModalOpen}
+          onClose={handleCloseModal}
+        />
+      )}
     </div>
   );
 };
