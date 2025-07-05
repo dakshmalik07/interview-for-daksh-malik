@@ -1,15 +1,11 @@
-import { useEffect, useState } from 'react'
-import '@styles/index.css';
-
-
 function App() {
- 
-  
-  return !loading ? (
-    <div className=''>
-     
-    </div>
-  )
-}
+  const loading = false;
 
-export default App
+  if (loading) return <div>Loading...</div>;
+
+  return (
+    <div className=''>
+      {/* Your content */}
+    </div>
+  );
+}
