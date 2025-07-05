@@ -3,10 +3,10 @@ import Header from '../../components/common/Header';
 import Dropdown from '../../components/ui/Dropdown';
 import Pagination from '../../components/ui/Pagination';
 import LaunchModal from '../../components/ui/LaunchModal';
+import DatePicker from '../../components/ui/DataPicker';
 import { fetchSpaceXLaunches } from '../../spacexApi'
 
 const SpaceXLaunchHistory = () => {
-  const [selectedPeriod, setSelectedPeriod] = useState('All Time');
   const [selectedLaunchType, setSelectedLaunchType] = useState('All Launches');
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
@@ -15,13 +15,8 @@ const SpaceXLaunchHistory = () => {
   const [selectedLaunch, setSelectedLaunch] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [error, setError] = useState(null);
-
-  const periodOptions = [
-    'Past 6 Months',
-    'Past Year',
-    'Past 2 Years',
-    'All Time'
-  ];
+  const [selectedTimeRange, setSelectedTimeRange] = useState('All time');
+  const [dateRange, setDateRange] = useState(null);
 
   const launchTypeOptions = [
     'All Launches',
@@ -38,7 +33,7 @@ const SpaceXLaunchHistory = () => {
 
   useEffect(() => {
     filterLaunches();
-  }, [launches, selectedPeriod, selectedLaunchType]);
+  }, [launches, selectedLaunchType, dateRange]);
 
   const loadLaunches = async () => {
     try {
@@ -56,34 +51,16 @@ const SpaceXLaunchHistory = () => {
 
   const filterLaunches = () => {
     let filtered = [...launches];
-    const currentDate = new Date();
 
-    // Filter by period
-    if (selectedPeriod !== 'All Time') {
-      let dateLimit;
-      switch (selectedPeriod) {
-        case 'Past 6 Months':
-          dateLimit = new Date(currentDate.getTime() - 6 * 30 * 24 * 60 * 60 * 1000);
-          break;
-        case 'Past Year':
-          dateLimit = new Date(currentDate.getTime() - 365 * 24 * 60 * 60 * 1000);
-          break;
-        case 'Past 2 Years':
-          dateLimit = new Date(currentDate.getTime() - 2 * 365 * 24 * 60 * 60 * 1000);
-          break;
-        default:
-          dateLimit = null;
-      }
-      
-      if (dateLimit) {
-        filtered = filtered.filter(launch => {
-          const launchDate = new Date(launch.date_utc);
-          return launchDate >= dateLimit;
-        });
-      }
+    // Filter by date range - only apply if dateRange is not null (null means "All time")
+    if (dateRange) {
+      filtered = filtered.filter(launch => {
+        const launchDate = new Date(launch.date_utc);
+        return launchDate >= dateRange.startDate && launchDate <= dateRange.endDate;
+      });
     }
 
-    // Filter by launch type - using API fields instead of date calculation
+    // Filter by launch type
     switch (selectedLaunchType) {
       case 'Successful Launches':
         filtered = filtered.filter(launch => launch.success === true);
@@ -95,12 +72,19 @@ const SpaceXLaunchHistory = () => {
         filtered = filtered.filter(launch => launch.upcoming === true);
         break;
       default:
-        // All launches - no additional filtering
         break;
     }
 
     setFilteredLaunches(filtered);
-    setCurrentPage(1); // Reset to first page when filters change
+    setCurrentPage(1);
+  };
+
+  const handleDateRangeChange = (range) => {
+    setDateRange(range);
+  };
+
+  const handleTimeRangeChange = (range) => {
+    setSelectedTimeRange(range);
   };
 
   const formatDate = (dateString) => {
@@ -117,7 +101,6 @@ const SpaceXLaunchHistory = () => {
   };
 
   const getStatusInfo = (launch) => {
-    // Use API fields instead of date comparison
     if (launch.upcoming === true) {
       return {
        status: 'Upcoming',
@@ -151,10 +134,6 @@ const SpaceXLaunchHistory = () => {
     setSelectedLaunch(null);
   };
 
-  const handlePeriodChange = (period) => {
-    setSelectedPeriod(period);
-  };
-
   const handleLaunchTypeChange = (type) => {
     setSelectedLaunchType(type);
   };
@@ -163,28 +142,23 @@ const SpaceXLaunchHistory = () => {
     setCurrentPage(page);
   };
 
-  // Calculate pagination
   const totalPages = Math.ceil(filteredLaunches.length / launchesPerPage);
   const startIndex = (currentPage - 1) * launchesPerPage;
   const endIndex = startIndex + launchesPerPage;
   const currentLaunches = filteredLaunches.slice(startIndex, endIndex);
 
   return (
-    <div className="w-full bg-global-5 flex flex-col min-h-screen">
+    <div className="w-full bg-global-5 flex flex-col h-screen overflow-hidden">
       <Header />
       
       <div className="flex flex-col items-center gap-8 sm:gap-10 md:gap-11 w-full px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-        {/* Filters Section */}
         <div className="w-full max-w-[954px] mx-auto">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0">
             <div className="w-full sm:w-auto">
-              <Dropdown
-                placeholder="All Time"
-                options={periodOptions}
-                value={selectedPeriod}
-                onChange={handlePeriodChange}
-                leftIcon="/images/img_icon.svg"
-                rightIcon="/images/img_arrowdown.svg"
+              <DatePicker
+                value={selectedTimeRange}
+                onChange={handleTimeRangeChange}
+                onDateRangeChange={handleDateRangeChange}
               />
             </div>
             
@@ -205,10 +179,8 @@ const SpaceXLaunchHistory = () => {
           </div>
         </div>
 
-        {/* Table Section */}
         <div className="w-full max-w-[954px] mx-auto">
           <div className="bg-global-5 border border-[#e4e4e7] rounded-md shadow-[0px_1px_3px_#00000019] overflow-hidden">
-            {/* Table Header */}
             <div className="bg-global-2 px-3 sm:px-4 py-2 sm:py-3">
               <div className="hidden md:grid md:grid-cols-12 gap-2 sm:gap-4 text-xs font-inter font-medium leading-4 text-global-3">
                 <div className="col-span-1">No:</div>
@@ -220,13 +192,11 @@ const SpaceXLaunchHistory = () => {
                 <div className="col-span-2">Rocket</div>
               </div>
               
-              {/* Mobile Header */}
               <div className="md:hidden text-xs font-inter font-medium leading-4 text-global-3 text-center">
                 Launch History
               </div>
             </div>
 
-            {/* Table Content */}
             <div className="relative">
               {isLoading ? (
                 <div className="flex justify-center items-center py-24 sm:py-32 md:py-48">
@@ -264,7 +234,6 @@ const SpaceXLaunchHistory = () => {
                         className="px-3 sm:px-4 py-3 sm:py-4 hover:bg-gray-50 cursor-pointer transition-colors"
                         onClick={() => handleLaunchClick(launch)}
                       >
-                        {/* Desktop Layout */}
                         <div className="hidden md:grid md:grid-cols-12 gap-2 sm:gap-4 items-center text-xs font-inter font-normal leading-4 text-global-2">
                           <div className="col-span-1">{globalIndex.toString().padStart(2, '0')}</div>
                           <div className="col-span-2">{formatDate(launch.date_utc)}</div>
@@ -279,7 +248,6 @@ const SpaceXLaunchHistory = () => {
                           <div className="col-span-2">{launch.rocket?.name || 'Unknown'}</div>
                         </div>
 
-                        {/* Mobile Layout */}
                         <div className="md:hidden space-y-2">
                           <div className="flex justify-between items-start">
                             <div className="text-xs font-inter font-medium text-global-2">#{globalIndex.toString().padStart(2, '0')}</div>
@@ -302,7 +270,6 @@ const SpaceXLaunchHistory = () => {
             </div>
           </div>
 
-          {/* Pagination - positioned right below the table */}
           {!isLoading && !error && filteredLaunches.length > 0 && (
             <Pagination
               currentPage={currentPage}
@@ -314,7 +281,6 @@ const SpaceXLaunchHistory = () => {
         </div>
       </div>
 
-      {/* Launch Details Modal */}
       {selectedLaunch && (
         <LaunchModal
           launch={selectedLaunch}
