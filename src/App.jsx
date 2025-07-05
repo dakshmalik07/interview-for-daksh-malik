@@ -1,11 +1,12 @@
+// src/App.jsx
+import React from 'react';
+
 function App() {
-  const loading = false;
-
-  if (loading) return <div>Loading...</div>;
-
   return (
-    <div className=''>
-      {/* Your content */}
+    <div>
+      Hello World
     </div>
   );
 }
+
+export default App; // ✅ THIS is required
